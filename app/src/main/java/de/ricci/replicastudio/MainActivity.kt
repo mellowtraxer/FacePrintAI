@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-@Composable private fun SliderRow(label:String,value:Float,range:ClosedFloatingPointRange<Float>=.65f..1.35f,onChange:(Float)->Unit) {
+@Composable private fun SliderRow(label:String,value:Float,range:ClosedFloatingPointRange<Float> = .65f..1.35f,onChange:(Float)->Unit) {
     Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
         Text(label,modifier=Modifier.width(140.dp),style=MaterialTheme.typography.bodySmall)
         Slider(value=value,onValueChange=onChange,valueRange=range,modifier=Modifier.weight(1f))
