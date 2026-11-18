@@ -15,3 +15,10 @@ Native Kotlin / Jetpack Compose Android prototype. The existing GitHub Pages Fac
 
 ## Build
 Run GitHub Actions > Replica Studio Android APK, download artifact and install APK. Debug builds are for testing only.
+
+## Alpha 2 – Photo-to-avatar first fit
+- Reference photo is processed on device using ML Kit Pose Detection.
+- Left/right shoulder and hip landmarks are required with minimum confidence.
+- Shoulder-to-hip width ratio initializes the parametric avatar's shoulder slider.
+- This is a **2D landmark-based proportion estimate**, not 3D photogrammetry, photorealistic body scanning, weight estimation, or reliable reconstruction of occluded geometry.
+- Next: full pose rigging, segmentation, multi-view calibration, optional secure cloud mesh generation, glTF model viewer.
