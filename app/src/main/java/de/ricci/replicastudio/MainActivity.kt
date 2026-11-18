@@ -1,6 +1,12 @@
 package de.ricci.replicastudio
 
 import android.os.Bundle
+import android.net.Uri
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.pose.PoseDetection
+import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
+import com.google.mlkit.vision.pose.PoseLandmark
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -53,9 +59,36 @@ class MainActivity : ComponentActivity() {
     var clothed by remember { mutableStateOf(true) }
     var prompt by remember { mutableStateOf("Adjust the character's overall body proportions and pose while preserving facial identity, hair, lighting and background. Keep the result natural and anatomically consistent.") }
     val clipboard=LocalClipboardManager.current
+    val context=LocalContext.current
+    var poseStatus by remember { mutableStateOf("Noch keine Fotoanalyse.") }
+    fun analyzePhoto(uri:Uri) {
+        poseStatus="Körperpunkte werden lokal erkannt …"
+        val image=try { InputImage.fromFilePath(context,uri) } catch(e:Exception) {
+            poseStatus="Bildfehler: ${e.localizedMessage}";return
+        }
+        val detector=PoseDetection.getClient(PoseDetectorOptions.Builder().setDetectorMode(PoseDetectorOptions.SINGLE_IMAGE_MODE).build())
+        detector.process(image).addOnSuccessListener { pose ->
+            val ids=listOf(PoseLandmark.LEFT_SHOULDER,PoseLandmark.RIGHT_SHOULDER,PoseLandmark.LEFT_HIP,PoseLandmark.RIGHT_HIP)
+            val pts=ids.mapNotNull {pose.getPoseLandmark(it)?.takeIf { p -> p.inFrameLikelihood>.5f }}
+            if(pts.size!=4) poseStatus="Schultern oder Hüfte nicht erkannt. Bitte gut sichtbares Ganzkörperfoto wählen."
+            else {
+                val a=pts[0].position;val b=pts[1].position;val d=pts[2].position;val e=pts[3].position
+                val sw=kotlin.math.hypot(a.x-b.x,a.y-b.y)
+                val hw=kotlin.math.hypot(d.x-e.x,d.y-e.y)
+                if(hw<5f||sw<5f) poseStatus="Foto für Proportionsmessung ungeeignet."
+                else {
+                    val ratio=sw/hw
+                    shoulders=(ratio/1.28f).coerceIn(.65f,1.35f)
+                    hips=1f
+                    poseStatus="✓ Körperpunkte erkannt. Schulter/Hüft-Verhältnis: ${String.format(java.util.Locale.US,"%.2f",ratio)}. 3D-Grundform angepasst."
+                }
+            }
+            detector.close()
+        }.addOnFailureListener {e->poseStatus="Erkennung fehlgeschlagen: ${e.localizedMessage}";detector.close()}
+    }
     Column(Modifier.fillMaxSize().background(bg).verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Text("◈ REPLICA STUDIO",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=purple)
-        Text("4.0 · Android Alpha 1 · Interactive 3D",color=Color.LightGray)
+        Text("4.0 · Android Alpha 2 · Photo → 3D",color=Color.LightGray)
         Card(colors=CardDefaults.cardColors(containerColor=panel)) {
             Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text("01 · Bilder",fontWeight=FontWeight.Bold)
@@ -69,7 +102,9 @@ class MainActivity : ComponentActivity() {
                         if(target!=null) AsyncImage(model=target,contentDescription="Zielbild",modifier=Modifier.fillMaxWidth().height(145.dp))
                     }
                 }
-                Text("Bildvergleich und automatische Foto-zu-3D-Rekonstruktion folgen in späteren Versionen.",color=Color.LightGray,style=MaterialTheme.typography.bodySmall)
+                Button(onClick={reference?.let { uri -> { analyzePhoto(uri) } } ?: {},enabled=reference!=null,modifier=Modifier.fillMaxWidth()){Text("✦ Referenzfoto → 3D-Grundform")}
+                Text(poseStatus,color=purple,style=MaterialTheme.typography.bodySmall)
+                Text("Lokale ML Kit Pose-Erkennung: erste Schulter-/Hüftproportionen. Noch keine Tiefen- oder Oberflächenrekonstruktion.",color=Color.LightGray,style=MaterialTheme.typography.bodySmall)
             }
         }
         Card(colors=CardDefaults.cardColors(containerColor=panel)) {
