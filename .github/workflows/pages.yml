@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Bundle MediaPipe locally
         run: |
-          npm install --no-save --no-audit --no-fund @mediapipe/tasks-vision@0.10.22
+          npm install --no-save --no-audit --no-fund @mediapipe/tasks-vision@1.2.3
           mkdir -p vendor/wasm
           cp node_modules/@mediapipe/tasks-vision/vision_bundle.mjs vendor/
           cp node_modules/@mediapipe/tasks-vision/wasm/* vendor/wasm/
